@@ -1,3 +1,8 @@
-<p align="center">
-  <img src="koi/koi.gif" width="256" alt="A koi animated by my GitHub activity" />
-</p>
+<img align="right" src="assets/anime.gif" width="180" alt="Monochrome anime animation" />
+
+### serverestaa
+
+Backend engineer<br>
+Distributed systems · Data platforms
+
+<br clear="both" />
