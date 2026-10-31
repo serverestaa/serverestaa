@@ -1,0 +1,81 @@
+name: Koi
+
+on:
+  schedule:
+    - cron: '20 0 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/koi.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: profile-koi
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Download and verify git-koi 1.0.2
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive=git-koi-1.0.2-x86_64-unknown-linux-musl.tar.gz
+          install_dir="$RUNNER_TEMP/git-koi"
+          mkdir -p "$install_dir"
+          cd "$install_dir"
+          curl --fail --silent --show-error --location --proto '=https' --proto-redir '=https' \
+            --output "$archive" \
+            "https://github.com/yalongwastaken/git-koi/releases/download/v1.0.2/$archive"
+          printf '%s  %s\n' \
+            '2e5ea416ff3667685516b47a8091037ca3c1878267f19b26446a2c41431a776d' \
+            "$archive" | sha256sum --check --strict
+          tar -xzf "$archive" --no-same-owner
+          echo "$install_dir/git-koi-1.0.2-x86_64-unknown-linux-musl" >> "$GITHUB_PATH"
+
+      - name: Collect public activity
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KOI_LOGIN: ${{ github.repository_owner }}
+        run: git-koi collect "$KOI_LOGIN" --output "$RUNNER_TEMP/koi-snapshot.json"
+
+      - name: Render the koi
+        run: git-koi render "$RUNNER_TEMP/koi-snapshot.json" --output-dir koi --body white
+
+      - name: Upload the GIF
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: koi-gif
+          path: koi/koi.gif
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: generate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: koi-gif
+          path: koi
+      - name: Commit the GIF if it changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          git add -- koi/koi.gif
+          if git diff --cached --quiet; then
+            echo 'The koi is unchanged.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit --message 'Update profile koi'
+          git push

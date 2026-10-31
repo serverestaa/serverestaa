@@ -1,4 +1,4 @@
-<img align="right" src="assets/anime.gif" width="180" alt="Monochrome anime animation" />
+<img align="right" src="koi/koi.gif" width="128" alt="A koi animated by my GitHub activity" />
 
 ### serverestaa
 
